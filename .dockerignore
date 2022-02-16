@@ -1,0 +1,11 @@
+assets
+.git
+R
+results
+storage
+COPYING
+docker-compose.yml
+.gitignore
+pathology-signatures.Rproj
+README.md
+singularity.sh
