@@ -20,11 +20,16 @@ FROM rocker/rstudio:4.1.2
 
 LABEL org.opencontainers.image.authors="Emir Turkes emir.turkes@eturkes.com"
 
-RUN Rscript \
-    -e "install.packages('conflicted')" \
-    -e "install.packages('knitr')" \
-    -e "install.packages('rmarkdown')" \
-    -e "install.packages('markdown')" \
- && rm -Rf \
-    /tmp/downloaded_packages/ \
-    /tmp/*.rds
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libxt6 \
+    && Rscript \
+        -e "install.packages('conflicted')" \
+        -e "install.packages('knitr')" \
+        -e "install.packages('rmarkdown')" \
+        -e "install.packages('markdown')" \
+    && apt-get clean \
+    && rm -Rf \
+        /var/lib/apt/lists/ \
+        /tmp/downloaded_packages/ \
+        /tmp/*.rds
