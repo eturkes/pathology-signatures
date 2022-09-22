@@ -4,7 +4,7 @@ author:
   - name: "Emir Turkes [emir.turkes@eturkes.com]"
   - name: "UK Dementia Research Institute at UCL"
 date: '`r strftime(Sys.time(), "%B %d, %Y")`'
-bibliography: '../../../../../`r unlist(strsplit(getwd(), "/"))[4]`.bib'
+bibliography: '../../../../`r unlist(strsplit(getwd(), "/"))[4]`.bib'
 link-citations: true
 output:
   html_document:
@@ -18,10 +18,11 @@ output:
       collapsed: false
       smooth_scroll: false
 knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = encoding, output_file = file.path(
-    "..", "..", "..", "..", "..", "results",
-    unlist(strsplit(getwd(), "/"))[6], unlist(strsplit(getwd(), "/"))[7],
-    unlist(strsplit(getwd(), "/"))[8], unlist(strsplit(getwd(), "/"))[9], "01_prep.html"
+  rmarkdown::render(
+    inputFile, encoding = encoding, output_file = file.path(
+      "..", "..", "..",
+      "..", "results", unlist(strsplit(getwd(), "/"))[6],
+      unlist(strsplit(getwd(), "/"))[7], unlist(strsplit(getwd(), "/"))[8], "01_prep.html"
   ))})
 ---
 
@@ -42,7 +43,7 @@ div.main-container {max-width: none; width: 95%;}
 
 In this document we prepare the gene count matrix for downstream analysis.
 The data here is derived from @`r unlist(strsplit(getwd(), "/"))[7]` and will be referenced using the name ``r unlist(strsplit(getwd(), "/"))[7]``.
-This analysis focuses on normal neurons without neurofibrillary tangles (NFTs) from the dataset.
+This analysis focuses on neurons bearing neurofibrillary tangles (NFTs) from the dataset.
 
 ```{r}
 # Some standard boilerplate.
@@ -83,11 +84,15 @@ metadata_to_plot$Phase <- "no_label"
 # -------------------------------------------------------------------------
 
 data_name <- unlist(strsplit(getwd(), "/"))[6]
-analysis_no <- unlist(strsplit(getwd(), "/"))[8]
-assets_dir <- file.path("..", "..", "..", "...", "assets") # Backed up files and data.
-results_dir <- file.path("..", "..", "..", "..", "results", data_name, unlist(strsplit(getwd(), "/"))[7], analysis_no)
+analysis_no <- 1
+assets_dir <- file.path("..", "..", "..", "..", "assets") # Backed up files and data.
+results_dir <- file.path(
+  "..", "..", "..", "..", "results", data_name, unlist(strsplit(getwd(), "/"))[7], paste0("0", analysis_no)
+)
 
-cache_dir <- file.path("..", "..", "..", "..", "cache", data_name, unlist(strsplit(getwd(), "/"))[7], analysis_no)
+cache_dir <- file.path(
+  "..", "..", "..", "..", "cache", data_name, unlist(strsplit(getwd(), "/"))[7], paste0("0", analysis_no)
+)
 if (!dir.exists(cache_dir)) {
   dir.create(cache_dir, recursive = TRUE)
 }
