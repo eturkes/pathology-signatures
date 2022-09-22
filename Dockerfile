@@ -16,7 +16,7 @@
 #
 #    Emir Turkes can be contacted at emir.turkes@eturkes.com
 
-FROM rocker/rstudio:4.1.2
+FROM rocker/rstudio:4.2.1
 
 LABEL org.opencontainers.image.authors="Emir Turkes emir.turkes@eturkes.com"
 
