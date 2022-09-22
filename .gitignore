@@ -1,6 +1,9 @@
 # Objects and data backed up without version control
 /storage/
 
+# Objects and data backed up privately
+/notes/
+
 # Temporary objects and data that are not backed up
 /cache/
 
