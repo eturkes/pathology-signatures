@@ -1,11 +1,17 @@
 assets
 .git
+notes
 R
 results
 storage
 COPYING
 docker-compose.yml
 .gitignore
+pathology-signatures.bib
 pathology-signatures.Rproj
 README.md
 singularity.sh
+.env
+cache
+nohup.out
+.Rproj.user
