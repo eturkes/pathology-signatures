@@ -31,6 +31,7 @@ RUN apt-get update \
         -e "install.packages('knitr')" \
         -e "install.packages('rmarkdown')" \
         -e "install.packages('markdown')" \
+        -e "install.packages('DT')" \
         -e "install.packages('viridis')" \
         -e "install.packages('BiocManager')" \
         -e "install.packages('remotes')" \

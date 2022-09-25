@@ -20,7 +20,7 @@
 
 # Shell script for building a Singularity image from Docker Hub and running it.
 
-singularity pull pathology-signatures.simg docker://eturkes/pathology-signatures:R4.2.1v2
+singularity pull pathology-signatures.simg docker://eturkes/pathology-signatures:R4.2.1v3
 
 if [ "$1" = "all" ]; then
     singularity exec \

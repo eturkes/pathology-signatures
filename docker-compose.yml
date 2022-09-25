@@ -20,13 +20,13 @@ version: "3"
 
 services:
   all:
-    image: eturkes/pathology-signatures:R4.2.1v2
+    image: eturkes/pathology-signatures:R4.2.1v3
     volumes:
       - ".:/home/rstudio/pathology-signatures:rw"
     command: Rscript -e "source('/home/rstudio/pathology-signatures/R/run_all.R')"
 
   rstudio:
-    image: eturkes/pathology-signatures:R4.2.1v2
+    image: eturkes/pathology-signatures:R4.2.1v3
     volumes:
       - ".:/home/rstudio/pathology-signatures:rw"
     ports:
