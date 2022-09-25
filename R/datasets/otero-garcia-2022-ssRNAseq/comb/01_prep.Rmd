@@ -43,7 +43,7 @@ div.main-container {max-width: none; width: 95%;}
 
 In this document we prepare the gene count matrix for downstream analysis.
 The data here is derived from @`r unlist(strsplit(getwd(), "/"))[7]` and will be referenced using the name ``r unlist(strsplit(getwd(), "/"))[7]``.
-This analysis focuses on normal neurons without neurofibrillary tangles (NFTs) from the dataset.
+This analysis focuses on both NFT-bearing (neurofibrillary tangle) and normal neurons from the dataset.
 
 ```{r}
 # Some standard boilerplate.
@@ -74,7 +74,6 @@ invisible(suppressPackageStartupMessages(lapply(packages, library, character.onl
 source(file.path("..", "..", "..", "utils.R"))
 
 protocol <- c("human", "droplet", "single-cell", "umis") # See `cluster_pipeline` in `utils.R`.
-group <- "MAP2" # Extract group.
 vars_to_regress <- NULL # See `cluster_pipeline` in `utils.R`.
 parallel_override <- NULL # See `parallel_plan` in `utils.R`.
 
@@ -113,7 +112,6 @@ We start by gathering together the data and forming a SingleCellExperiment (SCE)
 ```{r}
 data <- readRDS(file.path(assets_dir, "datasets", "otero-garcia-2022-ssRNAseq", "excitatory_neurons.rds"))
 data <- data[ , data$Braak == "VI"]
-data <- data[ , data$SORT == group]
 
 sce <- as.SingleCellExperiment(data)
 rm(data)
