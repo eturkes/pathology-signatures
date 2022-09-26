@@ -33,12 +33,21 @@ RUN apt-get update \
         -e "install.packages('markdown')" \
         -e "install.packages('DT')" \
         -e "install.packages('viridis')" \
+        -e "install.packages('fastmatch')" \
+        -e "install.packages('factoextra')" \
+        -e "install.packages('pals')" \
+        -e "install.packages('tm')" \
         -e "install.packages('BiocManager')" \
         -e "install.packages('remotes')" \
         -e "BiocManager::install('glmGamPoi')" \
         -e "BiocManager::install('SingleCellExperiment')" \
         -e "BiocManager::install('biomaRt')" \
         -e "BiocManager::install('scuttle')" \
+        -e "BiocManager::install('GSEABase')" \
+        -e "BiocManager::install('GSVA')" \
+        -e "BiocManager::install('edgeR')" \
+        -e "BiocManager::install('ComplexHeatmap')" \
+        -e "BiocManager::install('GO.db')" \
         -e "remotes::install_github('satijalab/seurat', ref = 'develop')" \
     && apt-get clean \
     && rm -Rf \
