@@ -346,7 +346,7 @@ hist(as.matrix(GetAssayData(seurat)), main = "SCTransform normalized log counts 
 # Aggregate features to into "pseudo-bulk" counts.
 # Also perform independent filtering and transform to logCPM for limma-trend analysis.
 # ------------------------------------------------------------------------------------
-rds <- file.path(assets_dir, "pseudobulk.rds")
+rds <- file.path(cache_dir, "pseudobulk.rds")
 if (file.exists(rds)) {
   sce <- readRDS(rds)
 } else {
@@ -385,7 +385,7 @@ hist(logcounts(sce), main = "Final pseudobulk logCPM distribution")
 
 # Run GSVA on pseudo-bulk counts.
 # -------------------------------
-rds <- file.path(cache_dir, "gsva_pseudobulk.rds")
+rds <- file.path(assets_dir, "gsva_pseudobulk.rds")
 if (file.exists(rds)) {
   gsva <- readRDS(rds)
 } else {
@@ -409,7 +409,7 @@ colnames(design) <- c(
 fit <- lmFit(gsva, design)
 contrast_mat <- makeContrasts(BA9_EX_Neuron_NFT-BA9_EX_Neuron_normal, levels = design)
 cont_fit <- eBayes(contrasts.fit(fit, contrast_mat), trend = TRUE)
-tests <- decideTests(cont_fit, p.value = 5e-2)
+tests <- decideTests(cont_fit, p.value = 1e-2)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -429,7 +429,7 @@ names(gsva_list_pseudobulk) <- c(
 
 # Fit a strict model on pseudo-bulk GSVA results.
 # -----------------------------------------------
-tests <- decideTests(cont_fit, p.value = 1e-2)
+tests <- decideTests(cont_fit, p.value = 1e-3)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -449,7 +449,7 @@ names(gsva_list_pseudobulk_strict) <- c(
 
 # Fit a stricter model on pseudo-bulk GSVA results.
 # -------------------------------------------------
-tests <- decideTests(cont_fit, p.value = 5e-3)
+tests <- decideTests(cont_fit, p.value = 1e-4)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -469,7 +469,7 @@ names(gsva_list_pseudobulk_stricter) <- c(
 
 # Fit the strictest model on pseudo-bulk GSVA results.
 # ----------------------------------------------------
-tests <- decideTests(cont_fit, p.value = 1e-3)
+tests <- decideTests(cont_fit, p.value = 1e-5)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -577,7 +577,7 @@ colnames(design) <- c(
 fit <- lmFit(logcounts(sce), design)
 contrast_mat <- makeContrasts(BA9_EX_Neuron_NFT-BA9_EX_Neuron_normal, levels = design)
 cont_fit <- eBayes(contrasts.fit(fit, contrast_mat), trend = TRUE)
-tests <- decideTests(cont_fit, p.value = 5e-2)
+tests <- decideTests(cont_fit, p.value = 1e-2)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -597,7 +597,7 @@ names(markers_list_pseudobulk) <- c(
 
 # Fit a strict model on pseudo-bulk GSVA results.
 # -----------------------------------------------
-tests <- decideTests(cont_fit, p.value = 1e-2)
+tests <- decideTests(cont_fit, p.value = 1e-3)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -617,7 +617,7 @@ names(markers_list_pseudobulk_strict) <- c(
 
 # Fit a stricter model on pseudo-bulk GSVA results.
 # -------------------------------------------------
-tests <- decideTests(cont_fit, p.value = 5e-3)
+tests <- decideTests(cont_fit, p.value = 1e-4)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -637,7 +637,7 @@ names(markers_list_pseudobulk_stricter) <- c(
 
 # Fit the strictest model on pseudo-bulk GSVA results.
 # ----------------------------------------------------
-tests <- decideTests(cont_fit, p.value = 1e-3)
+tests <- decideTests(cont_fit, p.value = 1e-5)
 tests_up <- tests[tests[ , 1] == 1, ]
 tests_down <- tests[tests[ , 1] == -1, ]
 results <- topTable(cont_fit, number = Inf)
@@ -818,7 +818,7 @@ ggplot(data, aes(x, y)) +
 
 # Gene Set Heatmap
 
-```{r, fig.width = 15, fig.height = 20}
+```{r, fig.width = 14, fig.height = 7}
 anno_color <- hue_pal()(length(unique(sce$donor_id)))
 color <- colorRampPalette(rev(brewer.pal(9, "RdBu")))(100) # For main gene set heatmap.
 
@@ -1250,7 +1250,7 @@ edges_up <- get.edgelist(graph_up, FALSE)
 set.seed(1)
 layout_up <- qgraph.layout.fruchtermanreingold(
   edges_up, vcount = vcount(graph_up), E(graph_up)$weight,
-  area = vcount(graph_up) ^ 2, repulse.rad = vcount(graph_up) ^ 2
+  area = vcount(graph_up), repulse.rad = vcount(graph_up)
 )
 
 hub_gene_all_GO <- table(unlist(geneIds(gene_sets)))
@@ -1338,7 +1338,7 @@ edges_down <- get.edgelist(graph_down, FALSE)
 set.seed(1)
 layout_down <- qgraph.layout.fruchtermanreingold(
   edges_down, vcount = vcount(graph_down), E(graph_down)$weight,
-  area = vcount(graph_down) ^ 2, repulse.rad = vcount(graph_down) ^ 2
+  area = vcount(graph_down), repulse.rad = vcount(graph_down)
 )
 
 hub_gene_all_GO <- table(unlist(geneIds(gene_sets)))
@@ -1428,7 +1428,7 @@ edges <- get.edgelist(graph, FALSE)
 set.seed(1)
 layout <- qgraph.layout.fruchtermanreingold(
   edges, vcount = vcount(graph), E(graph)$weight,
-  area = vcount(graph) ^ 2, repulse.rad = vcount(graph) ^ 2
+  area = vcount(graph), repulse.rad = vcount(graph)
 )
 
 hub_gene_all_GO <- table(unlist(geneIds(gene_sets)))
@@ -1559,7 +1559,7 @@ vertex_label_cex <- data.frame(DE = DE) %>%
   )
 vertex_label_cex <- vertex_label_cex$type
 
-png(file.path(results_dir, "02_genefunnel_network.png"), 150, 150, "in", res = 72)
+png(file.path(results_dir, "02_genefunnel_network.png"), 450, 300, "in", res = 72)
 par(bg = "black", mar = c(5.1, 4.1, 4.1, 450.1), xpd = TRUE)
 plot(
     graph,
@@ -1569,15 +1569,15 @@ plot(
     layout = norm_coords(layout),
     vertex.size = (
       (abs(rowSums(module_membership_norm)) / hub_gene_all_GO) * abs(rowSums(module_membership_norm))
-    ) * 7.5,
+    ) * 20,
     vertex.label.color = vertex_label_color,
-    edge.width = (E(graph)$weight * 1) ^ 3,
+    edge.width = (E(graph)$weight * 2) ^ 5,
     vertex.shape = "pie",
     vertex.pie = module_membership_list,
     edge.color = ifelse(direction == "up", "firebrick1", "dodgerblue"),
     vertex.label.family = "sans",
     vertex.label.font = vertex_label_font,
-    vertex.label.cex = ifelse(DE == "yes", ((all_DE_match$Freq + 1) * 1.25), 2),
+    vertex.label.cex = ifelse(DE == "yes", ((all_DE_match$Freq + 1) * 10), 20),
     vertex.frame.color = vertex_frame_color,
     vertex.label = vertex_label
 )
@@ -1588,11 +1588,11 @@ legend(
     ),
     pch = 20,
     col = module_network_colors,
-    pt.cex = 15,
-    cex = 10,
+    pt.cex = 60,
+    cex = 40,
     bty = "n",
     text.col = "white",
-    inset = c(-0.62, 0)
+    inset = c(-0.25, 0)
 )
 dev.off()
 ```
