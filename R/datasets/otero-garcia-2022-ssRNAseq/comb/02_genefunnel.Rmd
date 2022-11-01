@@ -400,7 +400,6 @@ if (file.exists(rds)) {
 } else {
   gsva <- gsva(logcounts(sce), gene_sets, method = "ssgsea", ssgsea.norm = FALSE, verbose = FALSE)
   colnames(gsva) <- sce$Sample.ID.Custom
-  gsva <- (2 * (gsva - min(gsva)) / (max(gsva) - min(gsva))) - 1
   saveRDS(gsva, rds)
 }
 # -------------------------------
