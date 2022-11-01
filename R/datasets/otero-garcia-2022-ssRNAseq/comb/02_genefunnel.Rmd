@@ -278,6 +278,15 @@ if (file.exists(rds) & file.exists(rds2)) {
   )
   seurat <- seurat[rowSums(as.matrix(GetAssayData(seurat, slot = "counts")) > 0) > 0, ]
 
+  keep <- c()
+  for (sample in unique(seurat$Sample.ID.Custom)) {
+    sub_seurat <- subset(seurat, subset = Sample.ID.Custom == sample)
+    keep <- unique(
+      append(keep, names(which(rowSums(as.matrix(GetAssayData(sub_seurat, slot = "counts")) > 0) > downsample / 25)))
+    )
+  }
+  seurat <- seurat[keep, ]
+
   mart <- useEnsembl("ensembl", "hsapiens_gene_ensembl")
   attributes <- c("external_gene_name", "ensembl_gene_id", "chromosome_name")
   gene_anno <- getBM(attributes, "ensembl_gene_id", rownames(seurat), mart)
