@@ -394,7 +394,7 @@ hist(logcounts(sce), main = "Final pseudobulk logCPM distribution")
 
 # Run GSVA on pseudo-bulk counts.
 # -------------------------------
-rds <- file.path(assets_dir, "gsva_pseudobulk.rds")
+rds <- file.path(cache_dir, "gsva_pseudobulk.rds")
 if (file.exists(rds)) {
   gsva <- readRDS(rds)
 } else {
