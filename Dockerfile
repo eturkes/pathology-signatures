@@ -37,6 +37,7 @@ RUN apt-get update \
         -e "install.packages('factoextra')" \
         -e "install.packages('pals')" \
         -e "install.packages('tm')" \
+        -e "install.packages('qgraph')" \
         -e "install.packages('BiocManager')" \
         -e "install.packages('remotes')" \
         -e "BiocManager::install('glmGamPoi')" \
