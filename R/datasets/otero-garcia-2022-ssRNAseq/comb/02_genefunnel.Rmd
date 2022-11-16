@@ -1,5 +1,5 @@
 ---
-title: '01 Prep - `r unlist(strsplit(getwd(), "/"))[7]` - `r unlist(strsplit(getwd(), "/"))[8]`'
+title: '02 GeneFunnel - `r unlist(strsplit(getwd(), "/"))[7]` - `r unlist(strsplit(getwd(), "/"))[8]`'
 author:
   - name: "Emir Turkes [emir.turkes@eturkes.com]"
   - name: "UK Dementia Research Institute at UCL"
