@@ -131,15 +131,18 @@ if (file.exists(rds)) {
   gene_sets <- getGmt(file.path(assets_dir, "gene-sets", "gprofiler_hsapiens.ENSG", "hsapiens.GO.comb.ENSG.gmt"))
   keep <- filterGeneSets(gene_sets, 5, 50)
   gene_sets <- gene_sets[names(gene_sets) %in% names(keep)]
+
   for (i in seq(length(gene_sets@.Data))) {
     go_id <- gene_sets[[i]]@setName
     suppressWarnings(gene_sets[[i]]@setName <- gene_sets[[i]]@shortDescription)
     suppressWarnings(gene_sets[[i]]@shortDescription <- go_id)
   }
+
   if (any(duplicated(names(gene_sets))) == TRUE) {
     remove <- which(duplicated(names(gene_sets)))
     gene_sets <- gene_sets[-remove]
   }
+
   remove <- grep("positive regulation of", names(gene_sets))
   if (length(remove) > 0) {
     gene_sets <- gene_sets[-remove]
@@ -176,6 +179,19 @@ if (file.exists(rds)) {
   if (length(remove) > 0) {
     gene_sets <- gene_sets[-remove]
   }
+
+  overlap <- computeGeneSetsOverlapMax(gene_sets, unique(unlist(geneIds(gene_sets))))
+  tmp <- rowSums(overlap)
+  tmp <- tmp[order(tmp, decreasing = TRUE)]
+  gene_sets_sorted <- gene_sets[match(names(tmp), names(gene_sets))]
+
+  overlap <- computeGeneSetsOverlapMax(gene_sets_sorted, unique(unlist(geneIds(gene_sets_sorted))))
+  overlap[upper.tri(overlap)] <- 0
+  diag(overlap) <- 0
+  keep <- apply(overlap, 1, max)
+  keep <- keep[keep < 0.25]
+  gene_sets <- gene_sets[names(gene_sets) %in% names(keep)]
+
   saveRDS(gene_sets, rds)
 }
 # --------------------------
@@ -184,9 +200,11 @@ if (file.exists(rds)) {
 # ------------------------------------------------------------------------------
 rds <- file.path(cache_dir, "seurat_cleaned.rds")
 rds2 <- file.path(cache_dir, "gene_anno.rds")
+rds3 <- file.path(cache_dir, "gene_sets.rds")
 if (file.exists(rds) & file.exists(rds2)) {
   seurat <- readRDS(rds)
   gene_anno <- readRDS(rds2)
+  gene_sets <- readRDS(rds3)
 } else {
 
   # Remove obsolete data.
@@ -278,40 +296,38 @@ if (file.exists(rds) & file.exists(rds2)) {
   )
   seurat <- seurat[rowSums(as.matrix(GetAssayData(seurat, slot = "counts")) > 0) > 0, ]
 
-  keep <- c()
-  for (sample in unique(seurat$Sample.ID.Custom)) {
-    sub_seurat <- subset(seurat, subset = Sample.ID.Custom == sample)
-    keep <- unique(
-      append(keep, names(which(rowSums(as.matrix(GetAssayData(sub_seurat, slot = "counts")) > 0) > downsample / 25)))
-    )
-  }
-  seurat <- seurat[keep, ]
+  # keep <- c()
+  # for (sample in unique(seurat$Sample.ID.Custom)) {
+  #   sub_seurat <- subset(seurat, subset = Sample.ID.Custom == sample)
+  #   keep <- unique(
+  #     append(keep, names(which(rowSums(as.matrix(GetAssayData(sub_seurat, slot = "counts")) > 0) > downsample / 25)))
+  #   )
+  # }
+  # seurat <- seurat[keep, ]
+
+  add <- unique(unlist(geneIds(gene_sets))[which(unlist(geneIds(gene_sets)) %notin% rownames(seurat))])
+  new_mat <- GetAssayData(seurat, "counts")
+  null_mat <- matrix(0, length(add), ncol(new_mat))
+  rownames(null_mat) <- add
+  new_mat <- rbind(new_mat, null_mat)
+  seurat <- CreateSeuratObject(new_mat, meta.data = seurat[[]])
 
   mart <- useEnsembl("ensembl", "hsapiens_gene_ensembl")
-  attributes <- c("external_gene_name", "ensembl_gene_id", "chromosome_name")
+  attributes <- c("external_gene_name", "ensembl_gene_id")
   gene_anno <- getBM(attributes, "ensembl_gene_id", rownames(seurat), mart)
-  gene_anno <- gene_anno[gene_anno$chromosome_name %in% c(1:22), ]
-  remove <- which(gene_anno$external_gene_name == "")
-  gene_anno <- gene_anno[-remove, ]
   gene_anno <- gene_anno[gene_anno$ensembl_gene_id %in% unique(unlist(geneIds(gene_sets))), ]
+  add <- which(gene_anno$external_gene_name == "")
+  for (i in add) {
+    gene_anno[i, 1] <- gene_anno[i, 2]
+  }
 
-  tmp <- lapply(geneIds(gene_sets), function(x, y) na.omit(fastmatch::fmatch(x, y)), gene_anno$ensembl_gene_id)
-  tmp <- filterGeneSets(tmp, 5, 50)
+  tmp <- lapply(geneIds(gene_sets), function(x) x[!(x %notin% gene_anno$ensembl_gene_id)])
+  for (i in seq(length(gene_sets@.Data))) {
+    suppressWarnings(gene_sets[[i]]@geneIds <- tmp[[i]])
+  }
+  tmp <- filterGeneSets(gene_sets, 5, 50)
   gene_sets <- gene_sets[names(gene_sets) %in% names(tmp)]
-  
-  overlap <- computeGeneSetsOverlapMax(gene_sets, unique(unlist(geneIds(gene_sets))))
-  tmp <- rowSums(overlap)
-  tmp <- tmp[order(tmp, decreasing = TRUE)]
-  gene_sets_sorted <- gene_sets[match(names(tmp), names(gene_sets))]
 
-  overlap <- computeGeneSetsOverlapMax(gene_sets_sorted, unique(unlist(geneIds(gene_sets_sorted))))
-  overlap[upper.tri(overlap)] <- 0
-  diag(overlap) <- 0
-  keep <- apply(overlap, 1, max)
-  keep <- keep[keep < 0.25]
-  gene_sets <- gene_sets[names(gene_sets) %in% names(keep)]
-  
-  gene_anno <- gene_anno[gene_anno$ensembl_gene_id %in% unique(unlist(geneIds(gene_sets))), ]
   seurat <- seurat[rownames(seurat) %in% gene_anno$ensembl_gene_id, ]
 
   seurat$condition <- factor(seurat$SORT)
@@ -320,6 +336,7 @@ if (file.exists(rds) & file.exists(rds2)) {
 
   saveRDS(seurat, rds)
   saveRDS(gene_anno, rds2)
+  saveRDS(gene_sets, rds3)
 }
 # ------------------------------------------------------------------------------
 
@@ -352,12 +369,36 @@ for (i in 1:length(metadata_to_plot)) {
 
 hist(as.matrix(GetAssayData(seurat)), main = "SCTransform normalized log counts distribution")
 
+seurat_old <- seurat
+
+add <- unique(unlist(geneIds(gene_sets))[which(unlist(geneIds(gene_sets)) %notin% rownames(seurat_old))])
+new_mat <- GetAssayData(seurat_old, "counts")
+null_mat <- matrix(0, length(add), ncol(new_mat))
+rownames(null_mat) <- add
+new_mat <- rbind(new_mat, null_mat)
+seurat <- CreateSeuratObject(new_mat, meta.data = seurat_old[[]])
+
+add <- unique(unlist(geneIds(gene_sets))[which(unlist(geneIds(gene_sets)) %notin% rownames(seurat_old))])
+new_mat <- GetAssayData(seurat_old)
+null_mat <- matrix(0, length(add), ncol(new_mat))
+rownames(null_mat) <- add
+new_mat <- rbind(new_mat, null_mat)
+seurat <- SetAssayData(seurat, new.data = new_mat)
+
+rm(seurat_old)
+
+hist(
+  as.matrix(GetAssayData(seurat)), main = "SCTransform normalized log counts distribution after adding missing genes"
+)
+
 # Aggregate features to into "pseudo-bulk" counts.
 # Also perform independent filtering and transform to logCPM for limma-trend analysis.
 # ------------------------------------------------------------------------------------
 rds <- file.path(cache_dir, "pseudobulk.rds")
+rds2 <- file.path(cache_dir, "pseudobulk_filtered.rds")
 if (file.exists(rds)) {
   sce <- readRDS(rds)
+  sce_filt <- readRDS(rds2)
 } else {
   sce <- as.SingleCellExperiment(seurat)
   sce <- suppressWarnings(
@@ -365,29 +406,20 @@ if (file.exists(rds)) {
       sce, colData(sce)[ , c("condition", "donor_id")], use_exprs_values = "counts", statistics = "sum"
     )
   )
-  keep <- filterByExpr(counts(sce), group = sce$condition, min.total.count = 10)
-  sce <- sce[keep, ]
+  keep <- filterByExpr(counts(sce), group = sce$condition, min.total.count = 50, min.count = 50)
+  sce_filt <- sce[keep, ]
+
   dge <- DGEList(counts(sce))
   dge <- calcNormFactors(dge)
   logcounts(sce, withDimnames = FALSE) <- cpm(dge, log = TRUE, prior.count = 3)
+
+  dge <- DGEList(counts(sce_filt))
+  dge <- calcNormFactors(dge)
+  logcounts(sce_filt, withDimnames = FALSE) <- cpm(dge, log = TRUE, prior.count = 3)
+
   saveRDS(sce, rds)
+  saveRDS(sce_filt, rds2)
 }
-
-# Subset other objects to filtered SCE object.
-# --------------------------------------------
-gene_anno <- gene_anno[gene_anno$ensembl_gene_id %in% rownames(sce), ]
-seurat <- seurat[rownames(seurat) %in% rownames(sce), ]
-
-tmp <- lapply(
-  geneIds(gene_sets), function(x, y) na.omit(fastmatch::fmatch(x, y)), gene_anno$ensembl_gene_id
-)
-tmp <- filterGeneSets(tmp, 5, 50)
-gene_sets <- gene_sets[names(gene_sets) %in% names(tmp)]
-
-sce <- sce[rownames(sce) %in% unique(unlist(geneIds(gene_sets))), ]
-gene_anno <- gene_anno[gene_anno$ensembl_gene_id %in% rownames(sce), ]
-seurat <- seurat[rownames(seurat) %in% rownames(sce), ]
-# --------------------------------------------
 # ------------------------------------------------------------------------------------
 
 hist(logcounts(sce), main = "Final pseudobulk logCPM distribution")
@@ -578,11 +610,11 @@ ggplot(data, aes(x, y)) +
 ```{r}
 # Fit model on pseudo-bulk counts.
 # --------------------------------
-design <- model.matrix(~ 0 + sce$condition + sce$donor_id)
+design <- model.matrix(~ 0 + sce_filt$condition + sce_filt$donor_id)
 colnames(design) <- c(
-  levels(sce$condition), "Subject2", "Subject3", "Subject4", "Subject5", "Subject6", "Subject7", "Subject8"
+  levels(sce_filt$condition), "Subject2", "Subject3", "Subject4", "Subject5", "Subject6", "Subject7", "Subject8"
 )
-fit <- lmFit(logcounts(sce), design)
+fit <- lmFit(logcounts(sce_filt), design)
 contrast_mat <- makeContrasts(BA9_EX_Neuron_NFT-BA9_EX_Neuron_normal, levels = design)
 cont_fit <- eBayes(contrasts.fit(fit, contrast_mat), trend = TRUE)
 tests <- decideTests(cont_fit, p.value = 1e-2)
@@ -598,8 +630,8 @@ if (length(all) > 0) {
 }
 markers_list_pseudobulk <- list(all, up, down)
 names(markers_list_pseudobulk) <- c(
-  "All DE", paste0("Upregulated in ", levels(sce$condition)[1]),
-  paste0("Downregulated in ", levels(sce$condition)[2])
+  "All DE", paste0("Upregulated in ", levels(sce_filt$condition)[1]),
+  paste0("Downregulated in ", levels(sce_filt$condition)[2])
 )
 # --------------------------------------
 
@@ -618,8 +650,8 @@ if (length(all) > 0) {
 }
 markers_list_pseudobulk_strict <- list(all, up, down)
 names(markers_list_pseudobulk_strict) <- c(
-  "All DE", paste0("Upregulated in ", levels(sce$condition)[1]),
-  paste0("Downregulated in ", levels(sce$condition)[2])
+  "All DE", paste0("Upregulated in ", levels(sce_filt$condition)[1]),
+  paste0("Downregulated in ", levels(sce_filt$condition)[2])
 )
 # -----------------------------------------------
 
@@ -638,8 +670,8 @@ if (length(all) > 0) {
 }
 markers_list_pseudobulk_stricter <- list(all, up, down)
 names(markers_list_pseudobulk_stricter) <- c(
-  "All DE", paste0("Upregulated in ", levels(sce$condition)[1]),
-  paste0("Downregulated in ", levels(sce$condition)[2])
+  "All DE", paste0("Upregulated in ", levels(sce_filt$condition)[1]),
+  paste0("Downregulated in ", levels(sce_filt$condition)[2])
 )
 # -------------------------------------------------
 
@@ -658,8 +690,8 @@ if (length(all) > 0) {
 }
 markers_list_pseudobulk_strictest <- list(all, up, down)
 names(markers_list_pseudobulk_strictest) <- c(
-  "All DE", paste0("Upregulated in ", levels(sce$condition)[1]),
-  paste0("Downregulated in ", levels(sce$condition)[2])
+  "All DE", paste0("Upregulated in ", levels(sce_filt$condition)[1]),
+  paste0("Downregulated in ", levels(sce_filt$condition)[2])
 )
 # ----------------------------------------------------
 # --------------------------------
@@ -738,11 +770,10 @@ markers_list_symbols_pseudobulk_strictest <- list(all, up, down)
 # Create new Seurat object with gene symbols.
 # -------------------------------------------
 new_mat <- GetAssayData(seurat)
+gene_anno <- gene_anno[order(match(gene_anno$ensembl_gene_id, rownames(new_mat))), ]
 rownames(new_mat) <- gene_anno$external_gene_name
 seurat_symbols <- CreateSeuratObject(new_mat, meta.data = seurat[[]])
 Idents(seurat_symbols) <- "idents"
-seurat_symbols <- SetAssayData(seurat_symbols, new.data = log2(as.matrix(GetAssayData(seurat_symbols, "counts")) + 1))
-seurat_symbols <- SetAssayData(seurat_symbols, "scale.data", t(scale(t(GetAssayData(seurat_symbols)), FALSE)))
 # -------------------------------------------
 ```
 
@@ -826,7 +857,7 @@ ggplot(data, aes(x, y)) +
 
 # Gene Set Heatmap
 
-```{r, fig.width = 14, fig.height = 7}
+```{r, fig.width = 15, fig.height = 12}
 anno_color <- hue_pal()(length(unique(sce$donor_id)))
 color <- colorRampPalette(rev(brewer.pal(9, "RdBu")))(100) # For main gene set heatmap.
 
@@ -895,7 +926,7 @@ up_vector <- vector()
 for (j in seq(length(gene_sets_sub_up@.Data))) {
   if (
     length(which(gene_sets_sub_up[[j]]@geneIds %in% markers_list_pseudobulk_all[[2]])) >=
-      round(length(gene_sets_sub_up[[j]]@geneIds) / 3)
+      round(length(gene_sets_sub_up[[j]]@geneIds) / 4)
     ) {
     up_vector <- append(up_vector, names(gene_sets_sub_up)[j])
   }
@@ -905,7 +936,7 @@ down_vector <- c()
 for (j in seq(length(gene_sets_sub_down@.Data))) {
   if (
     length(which(gene_sets_sub_down[[j]]@geneIds %in% markers_list_pseudobulk_all[[3]])) >=
-      round(length(gene_sets_sub_down[[j]]@geneIds) / 3)
+      round(length(gene_sets_sub_down[[j]]@geneIds) / 4)
   ) {
     down_vector <- append(down_vector, names(gene_sets_sub_down)[j])
   }
@@ -1573,7 +1604,7 @@ vertex_label_cex <- data.frame(DE = DE) %>%
   )
 vertex_label_cex <- vertex_label_cex$type
 
-png(file.path(results_dir, "02_genefunnel_network.png"), 450, 300, "in", res = 72)
+png(file.path(results_dir, "02_genefunnel_network.png"), 150, 100, "in", res = 72)
 par(bg = "black", mar = c(5.1, 4.1, 4.1, 450.1), xpd = TRUE)
 plot(
     graph,
@@ -1585,13 +1616,13 @@ plot(
       (abs(rowSums(module_membership_norm)) / hub_gene_all_GO) * abs(rowSums(module_membership_norm))
     ) * 20,
     vertex.label.color = vertex_label_color,
-    edge.width = (E(graph)$weight * 2) ^ 5,
+    edge.width = (E(graph)$weight * 1.5) ^ 3,
     vertex.shape = "pie",
     vertex.pie = module_membership_list,
     edge.color = ifelse(direction == "up", "firebrick1", "dodgerblue"),
     vertex.label.family = "sans",
     vertex.label.font = vertex_label_font,
-    vertex.label.cex = ifelse(DE == "yes", ((all_DE_match$Freq + 1) * 10), 20),
+    vertex.label.cex = ifelse(DE == "yes", ((all_DE_match$Freq) * 2), 2),
     vertex.frame.color = vertex_frame_color,
     vertex.label = vertex_label
 )
@@ -1602,11 +1633,11 @@ legend(
     ),
     pch = 20,
     col = module_network_colors,
-    pt.cex = 60,
-    cex = 40,
+    pt.cex = 15,
+    cex = 10,
     bty = "n",
     text.col = "white",
-    inset = c(-0.25, 0)
+    inset = c(-0.6, 0)
 )
 dev.off()
 ```
@@ -1727,6 +1758,7 @@ if (length(gsva_list_pseudobulk_all[[set]]) > 0) {
           ),
           color2,
           cluster_columns = FALSE,
+          cluster_rows = FALSE,
           show_column_names = FALSE,
           column_split = seurat_symbols$condition,
           show_heatmap_legend = FALSE,
@@ -1764,6 +1796,7 @@ if (length(gsva_list_pseudobulk_all[[set]]) > 0) {
           ),
           color2,
           cluster_columns = FALSE,
+          cluster_rows = FALSE,
           show_column_names = FALSE,
           column_split = seurat_symbols$condition,
           show_heatmap_legend = FALSE,
@@ -1859,6 +1892,7 @@ if (length(gsva_list_pseudobulk_all[[set]]) > 0) {
           ),
           color2,
           cluster_columns = FALSE,
+          cluster_rows = FALSE,
           show_column_names = FALSE,
           column_split = seurat_symbols$condition,
           show_heatmap_legend = FALSE,
@@ -1896,6 +1930,7 @@ if (length(gsva_list_pseudobulk_all[[set]]) > 0) {
           ),
           color2,
           cluster_columns = FALSE,
+          cluster_rows = FALSE,
           show_column_names = FALSE,
           column_split = seurat_symbols$condition,
           show_heatmap_legend = FALSE,

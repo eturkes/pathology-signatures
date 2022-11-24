@@ -625,7 +625,7 @@ word_cloud = function(x, width = NULL){
            "activating", "heavy", "different", "retention",
            "apparatus", "pad", "tubular", "organizing",
            "faces", "subunit", "lungs", "sshaped",
-           "ribosome", "synapse", "dendritic")
+           "binds", "synapse")
   txt = unlist(strsplit(x, " "))
   txt = Corpus(VectorSource(txt))
   txt = tm_map(txt, PlainTextDocument)
