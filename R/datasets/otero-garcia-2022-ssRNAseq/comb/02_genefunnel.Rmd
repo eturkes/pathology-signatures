@@ -308,6 +308,10 @@ if (file.exists(rds) & file.exists(rds2)) {
   add <- unique(unlist(geneIds(gene_sets))[which(unlist(geneIds(gene_sets)) %notin% rownames(seurat))])
   new_mat <- GetAssayData(seurat, "counts")
   null_mat <- matrix(0, length(add), ncol(new_mat))
+  for (i in seq(nrow(null_mat))) {
+    set.seed(i)
+    null_mat[i, sample(ncol(null_mat), 1)] <- 1
+  }
   rownames(null_mat) <- add
   new_mat <- rbind(new_mat, null_mat)
   seurat <- CreateSeuratObject(new_mat, meta.data = seurat[[]])
@@ -340,6 +344,7 @@ if (file.exists(rds) & file.exists(rds2)) {
 }
 # ------------------------------------------------------------------------------
 
+seurat_expanded <- seurat
 sub_name <- "sctransform"
 seurat <- cluster_pipeline(seurat, cache_dir, sub_name, protocol, vars_to_regress, parallel_override, FALSE)
 seurat
@@ -371,17 +376,15 @@ hist(as.matrix(GetAssayData(seurat)), main = "SCTransform normalized log counts 
 
 seurat_old <- seurat
 
-add <- unique(unlist(geneIds(gene_sets))[which(unlist(geneIds(gene_sets)) %notin% rownames(seurat_old))])
+add <- which(rownames(seurat_expanded) %notin% rownames(seurat_old))
 new_mat <- GetAssayData(seurat_old, "counts")
-null_mat <- matrix(0, length(add), ncol(new_mat))
-rownames(null_mat) <- add
+null_mat <- GetAssayData(seurat_expanded)[add, ]
 new_mat <- rbind(new_mat, null_mat)
 seurat <- CreateSeuratObject(new_mat, meta.data = seurat_old[[]])
 
-add <- unique(unlist(geneIds(gene_sets))[which(unlist(geneIds(gene_sets)) %notin% rownames(seurat_old))])
 new_mat <- GetAssayData(seurat_old)
-null_mat <- matrix(0, length(add), ncol(new_mat))
-rownames(null_mat) <- add
+min <- min(new_mat[new_mat > 0])
+null_mat[null_mat == 1] <- min
 new_mat <- rbind(new_mat, null_mat)
 seurat <- SetAssayData(seurat, new.data = new_mat)
 
